@@ -8,7 +8,7 @@ import speech_recognition as sr
 # Initialize the OpenAI client once
 client = OpenAI()
 
-
+# Main Loop where it waits and listens for words, mainly the lovecraft wakeup cue
 def listen_for_wake_word(wake_word):
     # Initialize the recognizer
     recognizer = sr.Recognizer()
@@ -29,7 +29,7 @@ def listen_for_wake_word(wake_word):
                 # Check if the wake word was said
                 if wake_word in text:
                     print(f"Wake word '{wake_word}' detected!")
-                    doAudioLoop()
+                    doRecordAudioLoop()
                     break  # Exit or perform an action
 
             except sr.WaitTimeoutError:
@@ -39,38 +39,7 @@ def listen_for_wake_word(wake_word):
             except sr.RequestError as e:
                 print(f"Could not request results from Google Speech Recognition service; {e}")
 
-def text_to_speech(message, file_name="output.mp3"):
-    """Generates speech from text using the OpenAI API and saves it to a file."""
-    try:
-        with client.audio.speech.with_streaming_response.create(
-            model="tts-1",
-            voice="echo",
-            input=message,
-        ) as response:
-            print(message)
-            response.stream_to_file(file_name)
-    except Exception as e:
-        print(f"Failed to generate speech: {e}")
-    return file_name
-
-def play_and_delete_audio(file_name):
-    """Plays an audio file and deletes it afterwards."""
-    try:
-        playsound(file_name)
-    except Exception as e:
-        print(f"Error playing the sound: {e}")
-    finally:
-        if os.path.exists(file_name):
-            os.remove(file_name)
-            print("File deleted.")
-        else:
-            print("File does not exist.")
-        if os.path.exists("file.wav"):
-            os.remove("file.wav")
-            print("file.wav deleted.")
-        else:
-            print("file.wav does not exist.")   
-
+# Takes in the transcribtion message and sends it to OpenAI
 def generate_response_msg(assistant_type, prompt):
     """Generates a response message using the OpenAI chat model."""
     try:
@@ -86,7 +55,20 @@ def generate_response_msg(assistant_type, prompt):
         print(f"Error generating response message: {e}")
         return "Error in generating response."
 
-
+# Converts Transcribed audio mp3 to speech output and outputs it to a temp output.mp3
+def text_to_speech(message, file_name="audio_output.mp3"):
+    """Generates speech from text using the OpenAI API and saves it to a file."""
+    try:
+        with client.audio.speech.with_streaming_response.create(
+            model="tts-1",
+            voice="echo",
+            input=message,
+        ) as response:
+            print(message)
+            response.stream_to_file(file_name)
+    except Exception as e:
+        print(f"Failed to generate speech: {e}")
+    return file_name
 
 # Function to transcribe audio
 def transcribe_audio(file_path):
@@ -97,29 +79,46 @@ def transcribe_audio(file_path):
         )
     return response
 
-def doAudioLoop():
+#Playes the audio file and deletes it after
+def play_and_delete_audio(file_name):
+    """Plays an audio file and deletes it afterwards."""
+    try:
+        playsound(file_name)
+    except Exception as e:
+        print(f"Error playing the sound: {e}")
+    finally:
+        if os.path.exists(file_name):
+            os.remove(file_name)
+            print("File deleted.")
+        else:
+            print("File does not exist.")
+        if os.path.exists("audio_input.wav"):
+            os.remove("audio_input.wav")
+            print("file.wav deleted.")
+        else:
+            print("file.wav does not exist.")   
+
+def doRecordAudioLoop():
     # Audio recording parameters
     FORMAT = pyaudio.paInt16
     CHANNELS = 1
     RATE = 16000
     CHUNK = 1024
     RECORD_SECONDS = 5
-    WAVE_OUTPUT_FILENAME = "file.wav"
-
+    WAVE_OUTPUT_FILENAME = "audio_input.wav"
     audio = pyaudio.PyAudio()
-
+    
     # start Recording
     stream = audio.open(format=FORMAT, channels=CHANNELS,
                         rate=RATE, input=True,
                         frames_per_buffer=CHUNK)
     print("Recording...")
     frames = []
-
     for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
         data = stream.read(CHUNK)
         frames.append(data)
-    print("Finished recording.")
 
+    print("Finished recording.")
     # stop Recording
     stream.stop_stream()
     stream.close()
@@ -131,11 +130,8 @@ def doAudioLoop():
         wf.setsampwidth(audio.get_sample_size(FORMAT))
         wf.setframerate(RATE)
         wf.writeframes(b''.join(frames))
-    
     transcription = transcribe_audio(WAVE_OUTPUT_FILENAME)
     print(transcription)
-
-
 
     # Example usage
     assistant_type = "You are a poetic personal assistant, skilled in explaining complex concepts with creative flair, in a clear and concise manner."
@@ -148,6 +144,8 @@ def doAudioLoop():
     listen_for_wake_word("lovecraft")
 
 if __name__ == "__main__":
+    #Initial Startup
     listen_for_wake_word("lovecraft")
-    doAudioLoop()
+    #First time it starts the loop
+    doRecordAudioLoop()
     
