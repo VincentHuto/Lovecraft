@@ -4,6 +4,7 @@ from playsound import playsound
 import pyaudio
 import wave
 import speech_recognition as sr
+from gpiozero import LED
 
 # Initialize the OpenAI client once
 client = OpenAI()
@@ -29,7 +30,11 @@ def listen_for_wake_word(wake_word):
                 # Check if the wake word was said
                 if wake_word in text:
                     print(f"Wake word '{wake_word}' detected!")
-                    doRecordAudioLoop()
+                    prompt = text.replace(wake_word,"")
+                    if not prompt or len(prompt) < 4:
+                        doRecordAudioLoop("")
+                    else:
+                        doRecordAudioLoop(prompt)
                     break  # Exit or perform an action
 
             except sr.WaitTimeoutError:
@@ -94,48 +99,52 @@ def play_and_delete_audio(file_name):
             print("File does not exist.")
         if os.path.exists("audio_input.wav"):
             os.remove("audio_input.wav")
-            print("file.wav deleted.")
+            print("audio_input.wav deleted.")
         else:
-            print("file.wav does not exist.")   
+            print("audio_input.wav does not exist.")   
 
-def doRecordAudioLoop():
-    # Audio recording parameters
-    FORMAT = pyaudio.paInt16
-    CHANNELS = 1
-    RATE = 16000
-    CHUNK = 1024
-    RECORD_SECONDS = 5
-    WAVE_OUTPUT_FILENAME = "audio_input.wav"
-    audio = pyaudio.PyAudio()
-    
-    # start Recording
-    stream = audio.open(format=FORMAT, channels=CHANNELS,
-                        rate=RATE, input=True,
-                        frames_per_buffer=CHUNK)
-    print("Recording...")
-    frames = []
-    for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
-        data = stream.read(CHUNK)
-        frames.append(data)
+def doRecordAudioLoop(incoming_prompt):
+    if not incoming_prompt:
+        # Audio recording parameters
+        FORMAT = pyaudio.paInt16
+        CHANNELS = 1
+        RATE = 16000
+        CHUNK = 1024
+        RECORD_SECONDS = 5
+        WAVE_OUTPUT_FILENAME = "audio_input.wav"
+        audio = pyaudio.PyAudio()
+        
+        # start Recording
+        stream = audio.open(format=FORMAT, channels=CHANNELS,
+                            rate=RATE, input=True,
+                            frames_per_buffer=CHUNK)
+        print("Recording...")
+        frames = []
+        for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+            data = stream.read(CHUNK)
+            frames.append(data)
 
-    print("Finished recording.")
-    # stop Recording
-    stream.stop_stream()
-    stream.close()
-    audio.terminate()
+        print("Finished recording.")
+        # stop Recording
+        stream.stop_stream()
+        stream.close()
+        audio.terminate()
 
-    # Saving the recorded data as a wave file
-    with wave.open(WAVE_OUTPUT_FILENAME, 'wb') as wf:
-        wf.setnchannels(CHANNELS)
-        wf.setsampwidth(audio.get_sample_size(FORMAT))
-        wf.setframerate(RATE)
-        wf.writeframes(b''.join(frames))
-    transcription = transcribe_audio(WAVE_OUTPUT_FILENAME)
-    print(transcription)
+        # Saving the recorded data as a wave file
+        with wave.open(WAVE_OUTPUT_FILENAME, 'wb') as wf:
+            wf.setnchannels(CHANNELS)
+            wf.setsampwidth(audio.get_sample_size(FORMAT))
+            wf.setframerate(RATE)
+            wf.writeframes(b''.join(frames))
+        transcription = transcribe_audio(WAVE_OUTPUT_FILENAME)
+        prompt = transcription.text
+        print(transcription)
+    else:
+        prompt = incoming_prompt
 
     # Example usage
     assistant_type = "You are a poetic personal assistant, skilled in explaining complex concepts with creative flair, in a clear and concise manner."
-    prompt = transcription.text
+   
 
     msg = generate_response_msg(assistant_type, prompt)
     audio_file = text_to_speech(msg)
