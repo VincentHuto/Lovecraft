@@ -29,7 +29,7 @@ def listen_for_wake_word(wake_word):
                 # Check if the wake word was said
                 if wake_word in text:
                     print(f"Wake word '{wake_word}' detected!")
-                    
+                    doAudioLoop()
                     break  # Exit or perform an action
 
             except sr.WaitTimeoutError:
