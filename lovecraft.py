@@ -1,13 +1,15 @@
 from openai import OpenAI
 import os
-from playsound import playsound
-import pyaudio
+from playsound import playsound # type: ignore
+import pyaudio # type: ignore
 import wave
-import speech_recognition as sr
-from gpiozero import LED
+import speech_recognition as sr # type: ignore
+from gpiozero import LED # type: ignore
 
 # Initialize the OpenAI client once
-client = OpenAI()
+client = OpenAI(api_key = "sk-proj-y8ixiHRPuoS6d56607pjT3BlbkFJGT0PLgGljunsfTC7YPh9")
+
+
 
 # Main Loop where it waits and listens for words, mainly the lovecraft wakeup cue
 def listen_for_wake_word(wake_word):
@@ -143,7 +145,7 @@ def doRecordAudioLoop(incoming_prompt):
         prompt = incoming_prompt
 
     # Example usage
-    assistant_type = "You are a poetic personal assistant, skilled in explaining complex concepts with creative flair, in a clear and concise manner."
+    assistant_type = "You are an old fashioned personal assistant, skilled in explaining complex concepts with creative flair, in a clear and concise manner."
    
 
     msg = generate_response_msg(assistant_type, prompt)
