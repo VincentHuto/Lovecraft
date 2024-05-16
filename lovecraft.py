@@ -7,7 +7,7 @@ import speech_recognition as sr # type: ignore
 from gpiozero import LED # type: ignore
 
 # Initialize the OpenAI client once
-client = OpenAI(api_key = "sk-proj-y8ixiHRPuoS6d56607pjT3BlbkFJGT0PLgGljunsfTC7YPh9")
+client = OpenAI(api_key = "")
 
 
 
