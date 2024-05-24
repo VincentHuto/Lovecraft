@@ -5,11 +5,44 @@ import pyaudio # type: ignore
 import wave
 import speech_recognition as sr # type: ignore
 from gpiozero import LED # type: ignore
+import time
 
 # Initialize the OpenAI client once
-client = OpenAI(api_key = "")
+client = OpenAI(api_key = "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")
+jarvis_thread = "thread_Qccg3zIGMMV6czoHGakD4wSK"
+thread = client.beta.threads.retrieve(jarvis_thread)
+assistant = client.beta.assistants.retrieve("asst_k3t4Vf5LFZbWcqRLBLHsB283")
 
-
+ #Try this if you want Jarvis to remember the conversation
+def ask_question_memory(question):
+    global thread
+    global thread_message
+    thread_message = client.beta.threads.messages.create(
+        thread.id,
+        role="user",
+        content=question,
+        )
+    # Create a run for the thread
+    run = client.beta.threads.runs.create(
+      thread_id=thread.id,
+      assistant_id=assistant.id,
+    )
+    # Wait for the run to complete
+    while True:
+        run_status = client.beta.threads.runs.retrieve(
+          thread_id=thread.id,
+          run_id=run.id
+        )
+        if run_status.status == 'completed':
+            break
+        elif run_status.status == 'failed':
+            return "The run failed."
+        time.sleep(1)  # Wait for 1 second before checking again
+    # Retrieve messages after the run has succeeded
+    messages = client.beta.threads.messages.list(
+      thread_id=thread.id
+    )
+    return messages.data[0].content[0].text.value
 
 # Main Loop where it waits and listens for words, mainly the lovecraft wakeup cue
 def listen_for_wake_word(wake_word):
@@ -51,7 +84,7 @@ def generate_response_msg(assistant_type, prompt):
     """Generates a response message using the OpenAI chat model."""
     try:
         completion = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": assistant_type},
                 {"role": "user", "content": prompt}
@@ -145,10 +178,12 @@ def doRecordAudioLoop(incoming_prompt):
         prompt = incoming_prompt
 
     # Example usage
+
+    date_and_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
     assistant_type = "You are an old fashioned personal assistant, skilled in explaining complex concepts with creative flair, in a clear and concise manner."
    
-
-    msg = generate_response_msg(assistant_type, prompt)
+    msg = ask_question_memory(prompt)
+   # msg = generate_response_msg(assistant_type, prompt)
     audio_file = text_to_speech(msg)
     
     play_and_delete_audio(audio_file)
